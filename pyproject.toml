@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 # project metadata
 
 [project]
-name = "hexdoc-ls"
+name = "hexdoc-lsp"
 dynamic = ["version"]
 description = "A Language Server Protocol implementation for Hex Casting, powered by hexdoc."
 authors = [
@@ -16,7 +16,7 @@ authors = [
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
-urls = { Source = "https://github.com/hexdoc-dev/hexdoc-ls" }
+urls = { Source = "https://github.com/hexdoc-dev/hexdoc-lsp" }
 keywords = ["hexdoc"]
 requires-python = ">=3.11"
 dependencies = [
@@ -31,7 +31,7 @@ test = [
     "pytest~=7.4",
 ]
 dev = [
-    "hexdoc-ls[test]",
+    "hexdoc-lsp[test]",
     "ruff~=0.1.6",
     "pre-commit",
     "nox",
@@ -39,11 +39,11 @@ dev = [
 
 [tool.hatch.version]
 source = "regex_commit"
-path = "src/hexdoc_ls/__version__.py"
+path = "src/hexdoc_lsp/__version__.py"
 tag_message = "Bump version to {new_version}"
 
 [project.scripts]
-hexdoc-ls = "hexdoc_ls.__main__:main"
+hexdoc-lsp = "hexdoc_lsp.__main__:main"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
@@ -52,7 +52,7 @@ only-include = [
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/hexdoc_ls",
+    "src/hexdoc_lsp",
 ]
 
 # Pytest

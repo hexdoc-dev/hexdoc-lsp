@@ -6,4 +6,4 @@ default_branch = "main"
 resource_dirs = [  # top takes priority
     { modid="hexcasting", external=false },
 ]
-export_dir = "src/hexdoc_ls/_export/generated"
+export_dir = "src/hexdoc_lsp/_export/generated"
