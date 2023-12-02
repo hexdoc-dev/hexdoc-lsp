@@ -1,0 +1,188 @@
+name: "[Reusable] Build and publish a hexdoc project"
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to install
+        type: string
+        required: true
+      release:
+        description: If the book should be written to the release path or the latest path
+        type: boolean
+        required: true
+      props:
+        description: Path to your props file (hexdoc.toml or properties.toml)
+        type: string
+        required: false
+      bump-version-segment:
+        description: Version segment to bump with Hatch
+        type: string
+        required: false
+      pip-extras:
+        description: Pip extras for your package (eg. [dev])
+        type: string
+        required: false
+    secrets:
+      GH_TOKEN:
+        required: true
+    outputs:
+      pages-url:
+        description: Current GitHub Pages url for this repo
+        value: ${{ jobs.build.outputs.pages-url }}
+      release:
+        description: Value of inputs.release for convenienc
+        value: ${{ inputs.release }}
+
+permissions:
+  contents: read
+
+env:
+  HEXDOC_PROPS: ${{ inputs.props }}
+  HEXDOC_RELEASE: ${{ inputs.release }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      # only limit concurrency if we're trying to bump the version (ie. pushing changes)
+      # everything else is fine to run concurrently
+      group: hexdoc-build-${{ inputs.bump-version-segment && github.sha || github.run_id }}
+      cancel-in-progress: false
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    permissions:
+      contents: write
+      pages: read
+    outputs:
+      pages-url: ${{ steps.export.outputs.pages-url }}
+      matrix:    ${{ steps.export.outputs.matrix }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: Install display server
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: xvfb
+
+      - name: Install Python packages
+        run: pip install -e .${{ inputs.pip-extras }} hatch
+
+      - name: Bump version
+        if: inputs.bump-version-segment
+        run: hatch version "${{ inputs.bump-version-segment }}"
+
+      - name: Commit changes
+        if: inputs.bump-version-segment
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Bump web book version from ${{ github.ref }}
+
+      - name: Export common data
+        id: export
+        run: xvfb-run --auto-servernum hexdoc ci export
+
+      - name: Upload hexdoc cache artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: hexdoc-cache
+          path: .hexdoc
+
+      - name: Upload temporary Pages artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: github-pages-tmp
+          path: _site
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: hexdoc-build
+          path: dist
+
+      - name: Add job summary
+        run: echo "Built version \`$(hatch version)\` from commit \`$(git rev-parse --short "$GITHUB_SHA")\`." >> $GITHUB_STEP_SUMMARY
+
+  render:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAGES_URL: ${{ needs.build.outputs.pages-url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJson(needs.build.outputs.matrix) }}
+    continue-on-error: ${{ matrix.lang.continue_on_error }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: Install Python packages
+        run: pip install .${{ inputs.pip-extras }}
+
+      - name: Download hexdoc cache artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: hexdoc-cache
+          path: .hexdoc
+
+      - name: Generate web book
+        run: hexdoc ci render ${{ matrix.lang.value }}
+
+      - name: Upload temporary Pages artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: github-pages-tmp
+          path: _site
+
+  deploy-pages:
+    needs: [build, render]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hexdoc-deploy-pages
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      GITHUB_PAGES_URL: ${{ needs.build.outputs.pages-url }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+
+      - name: Install Python packages
+        run: pip install .${{ inputs.pip-extras }}
+
+      - name: Checkout current Pages
+        uses: actions/checkout@v3
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: _site/dst
+
+      - name: Download temporary Pages artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: github-pages-tmp
+          path: _site/src/docs
+
+      - name: Add new docs to site
+        run: hexdoc ci merge
+
+      - name: Deploy to Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: _site/dst/docs
+          target-folder: docs

@@ -1,0 +1,9 @@
+modid = "hexcasting"
+book_id = "hexcasting:thehexbook"
+default_lang = "en_us"
+default_branch = "main"
+
+resource_dirs = [  # top takes priority
+    { modid="hexcasting", external=false },
+]
+export_dir = "src/hexdoc_ls/_export/generated"

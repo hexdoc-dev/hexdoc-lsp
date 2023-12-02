@@ -1,0 +1,161 @@
+[build-system]
+requires = [
+    "hatchling",
+    "hatch-regex-commit",
+]
+build-backend = "hatchling.build"
+
+# project metadata
+
+[project]
+name = "hexdoc-ls"
+dynamic = ["version"]
+description = "A Language Server Protocol implementation for Hex Casting, powered by hexdoc."
+authors = [
+    { name="object-Object" },
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+urls = { Source = "https://github.com/hexdoc-dev/hexdoc-ls" }
+keywords = ["hexdoc"]
+requires-python = ">=3.11"
+dependencies = [
+    "pygls~=1.2.1",
+    "hexdoc~=1!0.1.0.dev7",
+    "hexdoc-hexcasting~=0.11.1.1.dev",
+]
+
+[project.optional-dependencies]
+test = [
+    "pyright~=1.1.338",
+    "pytest~=7.4",
+]
+dev = [
+    "hexdoc-ls[test]",
+    "ruff~=0.1.6",
+    "pre-commit",
+    "nox",
+]
+
+[tool.hatch.version]
+source = "regex_commit"
+path = "src/hexdoc_ls/__version__.py"
+tag_message = "Bump version to {new_version}"
+
+[project.scripts]
+hexdoc-ls = "hexdoc_ls.__main__:main"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/hexdoc_ls",
+]
+
+# Pytest
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = [
+    "--import-mode=importlib",
+]
+filterwarnings = [
+    'ignore:setDaemon\(\) is deprecated, set the daemon attribute instead:DeprecationWarning:javascript.events',
+]
+
+# formatting
+
+[tool.ruff]
+extend-select = [
+    "I", # import sorting
+]
+extend-ignore = [
+    # covered by Pyright
+    "F821", # undefined variable
+    "F401", # imported but unused
+    "F841", # unused variable
+]
+extend-exclude = [
+    "vendor",
+    "venv",
+    "**/.*",
+    "**/node_modules",
+    "**/__pycache__",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+# type checking
+
+[tool.pyright]
+pythonVersion = "3.11"
+pythonPlatform = "All"
+
+venvPath = "."
+venv = "venv"
+
+include = [
+    "src",
+    "test",
+]
+exclude = [
+    "noxfile.py",
+    "**/venv",
+    "**/.*",
+    "**/node_modules",
+    "**/__pycache__",
+]
+
+typeCheckingMode = "basic"
+
+enableExperimentalFeatures = true
+strictDictionaryInference = true
+strictListInference = true
+strictSetInference = true
+
+reportAssertAlwaysTrue = "error"
+reportConstantRedefinition = "error"
+reportDeprecated = "error"
+reportFunctionMemberAccess = "error"
+reportIncompatibleMethodOverride = "error"
+reportIncompatibleVariableOverride = "error"
+reportIncompleteStub = "error"
+reportInconsistentConstructor = "error"
+reportInvalidStringEscapeSequence = "error"
+reportInvalidStubStatement = "error"
+reportInvalidTypeVarUse = "error"
+reportMatchNotExhaustive = "error"
+reportMissingParameterType = "error"
+reportOverlappingOverload = "error"
+reportSelfClsParameterName = "error"
+reportTypeCommentUsage = "error"
+reportUnknownParameterType = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryContains = "error"
+reportUnsupportedDunderAll = "error"
+reportUntypedBaseClass = "error"
+reportUntypedClassDecorator = "error"
+reportUntypedFunctionDecorator = "error"
+reportUntypedNamedTuple = "error"
+reportWildcardImportFromLibrary = "error"
+
+reportMissingTypeArgument = "warning"
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownLambdaType = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownVariableType = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryIsInstance = "warning"
+reportUnusedClass = "warning"
+reportUnusedExpression = "warning"
+reportUnusedFunction = "warning"
+reportUnusedImport = "warning"
+reportUnusedVariable = "warning"
+
+reportMissingTypeStubs = "none"
+reportDuplicateImport = "none"
